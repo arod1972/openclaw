@@ -23,6 +23,11 @@ import { measureAgentStartup } from "../agents/startup-timing.js";
 import { isExecutionIdentityCollectionEnabled } from "../audit/audit-config.js";
 import { readAgentRunTerminalOutcome } from "../channels/turn/agent-run-terminal-outcome.js";
 import { formatCliCommand } from "../cli/command-format.js";
+import {
+  agentTurnStreamParams,
+  parseAgentResponseFormatFlag,
+  parseAgentSeedFlag,
+} from "./agent-response-format.js";
 import { readCliGatewayRunFailure, recordCliGatewayRunFailure } from "../cli/failure-output.js";
 import { prepareCliGatewayStateAccess } from "../cli/gateway-rpc.runtime.js";
 import { withProgress } from "../cli/progress.js";
@@ -111,6 +116,10 @@ type AgentCliOpts = {
   lane?: string;
   runId?: string;
   extraSystemPrompt?: string;
+  /** Raw `--response-format` JSON. Parsed before dispatch. */
+  responseFormat?: string;
+  /** Raw `--seed` integer. Parsed before dispatch. */
+  seed?: string;
   local?: boolean;
 };
 type RemoteGatewayRoster = {
@@ -121,11 +130,13 @@ type RemoteGatewayRoster = {
   mainKey: string;
   scope: AgentsListResult["scope"];
 };
-type AgentDispatchOpts = Omit<AgentCliOpts, "messageFile"> & {
+type AgentDispatchOpts = Omit<AgentCliOpts, "messageFile" | "responseFormat" | "seed"> & {
   message: string;
   gatewayDispatchConfig?: OpenClawConfig;
   remoteGatewayRoster?: RemoteGatewayRoster;
   localGatewayCompatibilityAgentId?: string;
+  responseFormat?: Record<string, unknown>;
+  seed?: number;
 };
 
 type AgentCliSignal = EmbeddedStateSignal;
@@ -704,6 +715,8 @@ async function agentViaGatewayCommand(
             timeout: timeoutSeconds,
             lane: opts.lane,
             extraSystemPrompt: opts.extraSystemPrompt,
+            ...(opts.responseFormat ? { responseFormat: opts.responseFormat } : {}),
+            ...(opts.seed !== undefined ? { seed: opts.seed } : {}),
             idempotencyKey,
           },
           expectFinal: true,
@@ -877,7 +890,12 @@ export async function agentCliCommand(opts: AgentCliOpts, runtime: RuntimeEnv) {
   if (opts.json === true) {
     routeLogsToStderr();
   }
-  const { messageFile: rawMessageFile, ...rest } = opts;
+  const {
+    messageFile: rawMessageFile,
+    responseFormat: responseFormatFlag,
+    seed: seedFlag,
+    ...rest
+  } = opts;
   const messageFile = readNonBlankString(rawMessageFile);
   if (opts.message !== undefined && messageFile) {
     throw new Error("Use either --message or --message-file, not both.");
@@ -900,9 +918,16 @@ export async function agentCliCommand(opts: AgentCliOpts, runtime: RuntimeEnv) {
   }
   const dispatchOpts = await normalizeSessionKeyOptsForDispatch({ ...rest, message });
   validateExplicitSessionKeyForDispatch(dispatchOpts);
-  const gatewayDispatchOpts = dispatchOpts.runId
-    ? dispatchOpts
-    : { ...dispatchOpts, runId: randomIdempotencyKey() };
+  const responseFormat = parseAgentResponseFormatFlag(responseFormatFlag);
+  const seed = parseAgentSeedFlag(seedFlag);
+  const streamParams = agentTurnStreamParams({ responseFormat, seed });
+  const gatewayDispatchOpts = {
+    ...dispatchOpts,
+    ...(dispatchOpts.runId ? {} : { runId: randomIdempotencyKey() }),
+    responseFormat,
+    seed,
+    ...(streamParams ? { streamParams } : {}),
+  };
   const signalBridge = createEmbeddedStateSignalBridge();
   try {
     if (dispatchOpts.local === true) {

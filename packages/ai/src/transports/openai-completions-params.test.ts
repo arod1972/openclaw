@@ -686,6 +686,38 @@ describe("OpenAI completions sampling and response format", () => {
       }),
     ).not.toHaveProperty("response_format");
   });
+
+  it("rewrites llamacpp JSON Schema to the llama-server json_object form only when enabled", () => {
+    const model = makeCompletionsModel({
+      ...proxy,
+      provider: "llamacpp",
+      id: "local",
+      baseUrl: "http://127.0.0.1:8080/v1",
+      compat: { supportsJsonSchemaResponseFormat: true },
+    });
+    const configured = {
+      type: "json_schema" as const,
+      json_schema: { name: "reply", schema },
+    };
+    expect(
+      buildOpenAICompletionsParams(model, emptyContext(), { responseFormat: configured })
+        .response_format,
+    ).toEqual({ type: "json_object", schema });
+    expect(
+      buildOpenAICompletionsParams(model, emptyContext(), { responseFormat: schema }).response_format,
+    ).toEqual({ type: "json_object", schema });
+    const disabled = { ...model, compat: { supportsJsonSchemaResponseFormat: false } };
+    expect(
+      buildOpenAICompletionsParams(disabled, emptyContext(), { responseFormat: configured })
+        .response_format,
+    ).toBe(configured);
+    expect(
+      buildOpenAICompletionsParams(disabled, emptyContext(), { responseFormat: schema }),
+    ).not.toHaveProperty("response_format");
+    expect(buildOpenAICompletionsParams(model, emptyContext(), undefined)).not.toHaveProperty(
+      "response_format",
+    );
+  });
 });
 
 type ToolsModel = Omit<Model<"openai-completions">, "compat"> & Pick<OpenAIModeModel, "compat">;
