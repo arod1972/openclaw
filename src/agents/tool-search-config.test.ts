@@ -49,4 +49,38 @@ describe("Tool Search activation defaults", () => {
     };
     expect(resolveToolSearchConfig({ tools: { toolSearch: selection } })).toMatchObject(selection);
   });
+
+  it("lets an agent toolSearch setting replace the global one", () => {
+    const globalToolSearch = { enabled: true, mode: "tools" as const, searchDefaultLimit: 8 };
+    const config = {
+      tools: { toolSearch: globalToolSearch },
+      agents: {
+        entries: {
+          theo: { tools: { toolSearch: false } },
+          directory: {
+            tools: { toolSearch: { mode: "directory" as const, searchDefaultLimit: 3 } },
+          },
+          empty: { tools: { toolSearch: {} } },
+          other: {},
+        },
+      },
+    } satisfies OpenClawConfig;
+    expect(resolveToolSearchConfig(config, "theo")).toMatchObject({
+      enabled: false,
+      mode: "tools",
+    });
+    expect(resolveToolSearchConfig(config, "directory")).toMatchObject({
+      enabled: true,
+      mode: "directory",
+      searchDefaultLimit: 3,
+    });
+    expect(resolveToolSearchConfig(config, "empty")).toMatchObject({ enabled: false });
+    expect(resolveToolSearchConfig(config, "other")).toMatchObject({
+      enabled: true,
+      mode: "tools",
+      searchDefaultLimit: 8,
+    });
+    expect(resolveToolSearchConfig(config)).toMatchObject({ enabled: true, mode: "tools" });
+    expect(config.tools.toolSearch).toBe(globalToolSearch);
+  });
 });

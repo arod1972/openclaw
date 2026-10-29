@@ -17,6 +17,7 @@ import {
   resolveCatalog,
 } from "./tool-search-catalog.js";
 import { resolveToolSearchConfig } from "./tool-search-config.js";
+import { createToolSearchControlAllowance } from "./tool-search-control-policy.js";
 import { renderToolSearchControlText } from "./tool-search-control-result.js";
 import { applyToolSchemaDirectoryCatalog } from "./tool-search-directory.js";
 import {
@@ -54,6 +55,10 @@ export {
   restrictToolSearchCatalog,
 } from "./tool-search-catalog.js";
 export { resolveToolSearchConfig } from "./tool-search-config.js";
+export {
+  hiddenToolSearchCatalogCount,
+  projectModelFacingToolSearchControls,
+} from "./tool-search-control-surface.js";
 export {
   buildToolSchemaDirectoryPrompt,
   resolveToolSearchCatalogTool,
@@ -212,26 +217,36 @@ function formatToolSearchBatchResponse(
   return networkContent ? attachInternalToolResultContentSource(result, "network") : result;
 }
 
-function shouldExposeControlTool(name: string, mode: ToolSearchMode): boolean {
-  return mode === "tools" && TOOL_SCHEMA_DIRECTORY_CONTROL_TOOL_NAMES.has(name);
+function shouldExposeControlTool(
+  name: string,
+  mode: ToolSearchMode,
+  allowControl: (name: string) => boolean,
+): boolean {
+  return (
+    mode === "tools" && TOOL_SCHEMA_DIRECTORY_CONTROL_TOOL_NAMES.has(name) && allowControl(name)
+  );
 }
 
 /** Replace visible tools with Tool Search controls and register hidden catalog entries. */
 export function applyToolSearchCatalog(params: {
   tools: AnyAgentTool[];
   config?: OpenClawConfig;
+  agentId?: string;
+  modelProvider?: string;
+  modelId?: string;
   catalogRef?: ToolSearchCatalogRef;
   toolHookContext?: HookContext;
   shouldCatalogTool?: (tool: AnyAgentTool) => boolean;
   directToolNames?: Iterable<string>;
 }) {
-  const config = resolveToolSearchConfig(params.config);
+  const config = resolveToolSearchConfig(params.config, params.agentId);
+  const allowControl = createToolSearchControlAllowance(params);
   const directToolNames = new Set(normalizeStringEntries(Array.from(params.directToolNames ?? [])));
   return applyToolCatalogCompaction({
     ...params,
     enabled: config.enabled,
     selection: config,
-    isVisibleControlTool: (tool) => shouldExposeControlTool(tool.name, config.mode),
+    isVisibleControlTool: (tool) => shouldExposeControlTool(tool.name, config.mode, allowControl),
     isVisibleCatalogTool: (tool) => isDirectVisibleCatalogTool(tool, directToolNames),
   });
 }
@@ -300,7 +315,7 @@ function resolveSearchParameters(searchDefaultLimit: number): AnyAgentTool["para
 }
 
 export function createToolSearchTools(ctx: ToolSearchToolContext): AnyAgentTool[] {
-  const config = resolveToolSearchConfig(ctx.runtimeConfig ?? ctx.config);
+  const config = resolveToolSearchConfig(ctx.runtimeConfig ?? ctx.config, ctx.agentId);
   const runtime = new ToolSearchRuntime(ctx, config, { validateInput: true });
   return [
     {

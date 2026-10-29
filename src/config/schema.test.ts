@@ -414,6 +414,42 @@ describe("config schema", () => {
     }
   });
 
+  it("accepts a per-agent Tool Search override and rejects a bad one", () => {
+    expect(accepts({ agents: { entries: { theo: { tools: { toolSearch: false } } } } })).toBe(true);
+    expect(
+      accepts({
+        agents: {
+          entries: {
+            theo: {
+              tools: {
+                toolSearch: {
+                  enabled: true,
+                  mode: "directory",
+                  include: [{ source: "mcp" }],
+                  searchDefaultLimit: 4,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ).toBe(true);
+    expect(
+      accepts({ agents: { entries: { theo: { tools: { toolSearch: { mode: "catalog" } } } } } }),
+    ).toBe(false);
+    expect(
+      accepts({
+        agents: { entries: { theo: { tools: { toolSearch: { include: [{}] } } } } },
+      }),
+    ).toBe(false);
+    expect(
+      accepts({ agents: { entries: { theo: { tools: { toolSearch: { extra: true } } } } } }),
+    ).toBe(false);
+    expect(accepts({ agents: { entries: { theo: { tools: { toolSearchMode: true } } } } })).toBe(
+      false,
+    );
+  });
+
   it("looks up root config schema children without returning the full schema tree", () => {
     const lookup = lookupConfigSchema(baseSchema, ".");
     expect(lookup?.path).toBe(".");

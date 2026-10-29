@@ -11,6 +11,7 @@ import {
   visibleCatalogEntries,
 } from "./tool-search-catalog.js";
 import { resolveToolSearchConfig } from "./tool-search-config.js";
+import { createToolSearchControlAllowance } from "./tool-search-control-policy.js";
 import {
   TOOL_SCHEMA_DIRECTORY_CONTROL_TOOL_NAMES,
   TOOL_SEARCH_RAW_TOOL_NAME,
@@ -28,11 +29,17 @@ const TOOL_DIRECTORY_IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/u;
 export function applyToolSchemaDirectoryCatalog(params: {
   tools: AnyAgentTool[];
   config?: Parameters<typeof resolveToolSearchConfig>[0];
+  agentId?: string;
+  modelProvider?: string;
+  modelId?: string;
   catalogRef?: ToolSearchCatalogRef;
   toolHookContext?: Parameters<typeof applyToolCatalogCompaction>[0]["toolHookContext"];
   directToolNames?: Iterable<string>;
 }) {
-  const config = resolveToolSearchConfig(params.config);
+  const config = resolveToolSearchConfig(params.config, params.agentId);
+  const allowControl = createToolSearchControlAllowance(params);
+  const allowedControl = (tool: AnyAgentTool) =>
+    TOOL_SCHEMA_DIRECTORY_CONTROL_TOOL_NAMES.has(tool.name) && allowControl(tool.name);
   if (!config.enabled || !params.tools.some((tool) => tool.name === TOOL_SEARCH_RAW_TOOL_NAME)) {
     return applyToolCatalogCompaction({
       ...params,
@@ -46,7 +53,7 @@ export function applyToolSchemaDirectoryCatalog(params: {
     ...params,
     enabled: config.enabled,
     selection: config,
-    isVisibleControlTool: (tool) => TOOL_SCHEMA_DIRECTORY_CONTROL_TOOL_NAMES.has(tool.name),
+    isVisibleControlTool: allowedControl,
     // The unique-name gate defers any cross-source name collision before the
     // shared trust check runs.
     isVisibleCatalogTool: (tool) =>
@@ -61,7 +68,7 @@ export function buildToolSchemaDirectoryPrompt(
     toolSearchDirectoryLean?: boolean;
   },
 ): string {
-  const config = resolveToolSearchConfig(ctx.runtimeConfig ?? ctx.config);
+  const config = resolveToolSearchConfig(ctx.runtimeConfig ?? ctx.config, ctx.agentId);
   const catalog = resolveCatalog(ctx);
   const contextTokens = options?.contextTokenBudget;
   // At four characters per token, the listing gets 2.5% of the active window.

@@ -107,6 +107,8 @@ policy, approval, hook, logging, and result handling still apply.
   tools, and tools required by the run's delivery policy remain visible; other
   schemas stay deferred.
 
+`agents.entries.<id>.tools.toolSearch` replaces `tools.toolSearch` for that agent when it is set (`true`, `false`, or the same object). Omit it to inherit the global setting, including the automatic structured default. Denying `tool_search`, `tool_describe`, `tool_call`, `dispatch_action`, or `*` removes those controls. OpenClaw also omits them when the hidden catalog they would front is empty after tool policy, so a closed `responseFormat` reply is not sent with tools or `tool_choice`.
+
 All modes use the same policy-filtered catalog and normal OpenClaw execution
 path. Tools marked `catalogMode: "direct-only"` stay outside that catalog and
 remain model-visible. In `directory` mode, client-provided tools stay directly visible
