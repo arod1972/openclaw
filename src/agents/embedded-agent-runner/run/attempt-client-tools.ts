@@ -26,7 +26,13 @@ import {
   isAgentToolReplaySafe,
 } from "../../tool-replay-safety.js";
 import { addClientToolsToToolCatalog } from "../../tool-search-catalog.js";
-import { resolveToolSearchConfig, type ToolSearchCatalogRef } from "../../tool-search.js";
+import { createToolSearchControlAllowance } from "../../tool-search-control-policy.js";
+import { TOOL_SEARCH_CONTROL_TOOL_NAMES } from "../../tool-search-types.js";
+import {
+  projectModelFacingToolSearchControls,
+  resolveToolSearchConfig,
+  type ToolSearchCatalogRef,
+} from "../../tool-search.js";
 import {
   AGENT_RESERVED_TOOL_NAMES,
   collectRegisteredToolNames,
@@ -175,11 +181,23 @@ export function prepareEmbeddedAttemptClientTools(params: {
           ),
       },
     );
-    const search = resolveToolSearchConfig(params.toolSearchRuntimeConfig);
+    const search = resolveToolSearchConfig(params.toolSearchRuntimeConfig, params.sessionAgentId);
+    const allowControl = createToolSearchControlAllowance({
+      config: params.toolSearchRuntimeConfig,
+      agentId: params.sessionAgentId,
+    });
+    // A denied control surface cannot front a hidden client. Leave those
+    // clients direct instead of cataloging them behind a tool the model
+    // will not receive. The model projection below still drops controls
+    // when the hidden catalog is empty.
+    const controlWouldBeAllowed = [...TOOL_SEARCH_CONTROL_TOOL_NAMES].some((name) =>
+      allowControl(name),
+    );
     const clientToolSearch = addClientToolsToToolCatalog({
       tools: clientToolDefs,
       enabled:
-        params.codeModeControlsEnabledForRun || (search.enabled && search.mode !== "directory"),
+        params.codeModeControlsEnabledForRun ||
+        (search.enabled && search.mode !== "directory" && controlWouldBeAllowed),
       catalogRef: params.toolSearchCatalogRef,
       selection: params.codeModeControlsEnabledForRun ? undefined : search,
     });
@@ -193,8 +211,16 @@ export function prepareEmbeddedAttemptClientTools(params: {
       });
     }
 
+    const modelTools = params.codeModeControlsEnabledForRun
+      ? effectiveTools
+      : projectModelFacingToolSearchControls(effectiveTools, {
+          enabled: search.enabled,
+          catalogRef: params.toolSearchCatalogRef,
+          config: params.toolSearchRuntimeConfig,
+          agentId: params.sessionAgentId,
+        });
     const customTools = toToolDefinitions(
-      effectiveTools,
+      modelTools,
       params.catalogToolHookContext,
       params.getToolAbortSignal?.(),
     );

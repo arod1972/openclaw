@@ -486,6 +486,28 @@ export const RUNTIME_FIELD_HELP: Record<string, string> = {
     "Per-agent additive allowlist for tools on top of global and profile policy. Keep narrow to avoid accidental privilege expansion on specialized agents.",
   "agents.entries.*.tools.codeMode":
     "Per-agent Code Mode options. Explicit enabled overrides the shared model and global activation defaults; an agent-specific model codeMode override wins. Other options merge over tools.codeMode without changing activation.",
+  "agents.entries.*.tools.toolSearch":
+    "Per-agent Tool Search override. When set, replaces tools.toolSearch for this agent, including false. Omitted inherits the global setting and the automatic structured default. Engaged Code Mode still takes precedence.",
+  "agents.entries.*.tools.toolSearch.enabled":
+    "Enables Tool Search for this agent. A set value replaces the global enabled flag instead of merging with it.",
+  "agents.entries.*.tools.toolSearch.mode":
+    'Per-agent model-facing surface: "tools" exposes structured search/describe/call tools; "directory" keeps a bounded directory plus selected schemas visible. Replaces the global mode when set.',
+  "agents.entries.*.tools.toolSearch.include":
+    "Per-agent presentation selectors for catalog-eligible, policy-approved tools. Omitted selects all eligible tools; [] selects none. Replaces the global include list when set.",
+  "agents.entries.*.tools.toolSearch.include[].source":
+    'Tool origin for this agent: "openclaw", "mcp", or "client".',
+  "agents.entries.*.tools.toolSearch.include[].name":
+    "Registered tool name or * glob for this agent's include selector, using tool-policy normalization.",
+  "agents.entries.*.tools.toolSearch.exclude":
+    "Tools this agent keeps directly visible instead of cataloging. Exclusion wins over inclusion. Replaces the global exclude list when set.",
+  "agents.entries.*.tools.toolSearch.exclude[].source":
+    'Origin to exclude from this agent\'s catalog: "openclaw", "mcp", or "client".',
+  "agents.entries.*.tools.toolSearch.exclude[].name":
+    "Registered tool name or * glob this agent keeps direct, using tool-policy normalization.",
+  "agents.entries.*.tools.toolSearch.searchDefaultLimit":
+    "Default Tool Search result count for this agent when the model omits a limit. Replaces the global default. Runtime clamps it to maxSearchLimit.",
+  "agents.entries.*.tools.toolSearch.maxSearchLimit":
+    "Maximum Tool Search results this agent can request. Replaces the global maximum. Runtime clamps values to 1..50.",
   "agents.entries.*.tools.swarm":
     "Per-agent swarm override. Values merge over the top-level tools.swarm configuration.",
   "agents.entries.*.tools.byProvider":

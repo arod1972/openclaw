@@ -553,6 +553,8 @@ const AgentToolsSchema = z
     ...CommonToolPolicyFields,
     /** Per-agent code mode override; merges over the top-level tools.codeMode config. */
     codeMode: CodeModeSchema,
+    /** Per-agent Tool Search override. When set, replaces tools.toolSearch; omitted inherits it. */
+    toolSearch: ToolSearchSchema,
     /** Per-agent swarm override; merges over the top-level tools.swarm config. */
     swarm: SwarmSchema,
     /** Per-agent elevated exec gate (can only further restrict global tools.elevated). */

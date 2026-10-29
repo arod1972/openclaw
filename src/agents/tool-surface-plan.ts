@@ -10,6 +10,7 @@ import {
 import { isLocalModelLeanEnabled } from "./local-model-lean.js";
 import type { EmbeddedRunTrigger } from "./run-trigger.js";
 import { normalizeToolPolicyName, readToolAllowlistIntersection } from "./tool-policy-shared.js";
+import { forceToolSearchDisabled, resolveToolSearchRuntimeConfig } from "./tool-search-config.js";
 import type { ToolSearchConfig } from "./tool-search-types.js";
 import {
   applyToolSchemaDirectoryCatalog,
@@ -69,17 +70,15 @@ export function resolveAgentToolSurfacePlan(params: AgentToolSurfacePlanParams) 
             toolSearch: { enabled: true, mode: "tools", searchDefaultLimit: 5, maxSearchLimit: 10 },
           },
         };
-  // Apply restrictions after snapshot selection so config rebinding cannot
-  // restore discovery for direct-tool or persistence-only turns.
+  // Agent toolSearch replaces global and the lean default. Memory flush and
+  // disableToolSearch still force the surface off after that overlay.
+  const agentToolConfig = resolveToolSearchRuntimeConfig(selectedToolConfig, params.agentId);
   const isMemoryFlushRun = params.trigger === "memory";
   const toolSearchRuntimeConfig =
     params.disableToolSearch || isMemoryFlushRun
-      ? {
-          ...selectedToolConfig,
-          tools: { ...selectedToolConfig?.tools, toolSearch: false as const },
-        }
-      : selectedToolConfig;
-  const toolSearchConfig = resolveToolSearchConfig(toolSearchRuntimeConfig);
+      ? forceToolSearchDisabled(agentToolConfig, params.agentId)
+      : agentToolConfig;
+  const toolSearchConfig = resolveToolSearchConfig(toolSearchRuntimeConfig, params.agentId);
   const toolsAvailable =
     params.toolsEnabled &&
     !isMemoryFlushRun &&

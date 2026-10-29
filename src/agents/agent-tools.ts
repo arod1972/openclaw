@@ -146,7 +146,7 @@ function* assembleOpenClawCodingTools(
   const executionSessionKey = options?.runSessionKey ?? options?.sessionKey;
   const attachmentReadRoot = subagentAttachmentRootForRun(executionAgentId, executionSessionKey);
 
-  const toolSearchConfig = resolveToolSearchConfig(options?.config);
+  const toolSearchConfig = resolveToolSearchConfig(options?.config, agentId);
   const toolSearchControlsEnabled =
     options?.includeToolSearchControls === true && toolSearchConfig.enabled;
   const toolSearchControlAllowlist = toolSearchControlsEnabled
