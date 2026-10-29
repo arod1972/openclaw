@@ -724,7 +724,7 @@ var External = [
     /(^sessionId$)/u,
     /(^sessionId$|^name$|^contentBase64$)/u,
     /(^path$|^size$|^uploadPathStyle$)/u,
-    /(^message$|^agentId$|^provider$|^model$|^to$|^replyTo$|^sessionId$|^sessionKey$|^createSessionIfMissing$|^expectedExistingSessionId$|^expectedExistingSessionLifecycleRevision$|^thinking$|^deliver$|^attachments$|^channel$|^replyChannel$|^accountId$|^replyAccountId$|^threadId$|^groupId$|^groupChannel$|^groupSpace$|^timeout$|^bestEffortDeliver$|^lane$|^cwd$|^cleanupBundleMcpOnRunEnd$|^modelRun$|^promptMode$|^extraSystemPrompt$|^bootstrapContextMode$|^bootstrapContextRunKind$|^acpTurnSource$|^internalRuntimeHandoffId$|^execApprovalFollowupExpectedSessionId$|^internalEvents$|^inputProvenance$|^suppressPromptPersistence$|^sessionEffects$|^sourceReplyDeliveryMode$|^disableMessageTool$|^swarmCollector$|^swarmOutputSchema$|^voiceWakeTrigger$|^idempotencyKey$|^label$)/u,
+    /(^message$|^agentId$|^provider$|^model$|^to$|^replyTo$|^sessionId$|^sessionKey$|^createSessionIfMissing$|^expectedExistingSessionId$|^expectedExistingSessionLifecycleRevision$|^thinking$|^deliver$|^attachments$|^channel$|^replyChannel$|^accountId$|^replyAccountId$|^threadId$|^groupId$|^groupChannel$|^groupSpace$|^timeout$|^bestEffortDeliver$|^lane$|^cwd$|^cleanupBundleMcpOnRunEnd$|^modelRun$|^promptMode$|^extraSystemPrompt$|^responseFormat$|^seed$|^bootstrapContextMode$|^bootstrapContextRunKind$|^acpTurnSource$|^internalRuntimeHandoffId$|^execApprovalFollowupExpectedSessionId$|^internalEvents$|^inputProvenance$|^suppressPromptPersistence$|^sessionEffects$|^sourceReplyDeliveryMode$|^disableMessageTool$|^swarmCollector$|^swarmOutputSchema$|^voiceWakeTrigger$|^idempotencyKey$|^label$)/u,
     /(^type$|^source$|^childSessionKey$|^childSessionId$|^announceType$|^taskLabel$|^status$|^statusLabel$|^result$|^noVisibleResult$|^modelRouteChange$|^attachments$|^mediaUrls$|^statsLine$|^replyInstruction$)/u,
     /(^type$|^path$|^url$|^mediaUrl$|^filePath$|^mimeType$|^name$|^sizeBytes$|^durationMs$|^width$|^height$)/u,
     /(^kind$|^originSessionId$|^sourceSessionKey$|^sourceChannel$|^sourceTool$|^sourceRole$|^sourcePromptPrefix$|^jobId$|^runId$)/u,
@@ -3955,6 +3955,10 @@ var External = [
     (value.extraSystemPrompt === void 0 ||
       !("extraSystemPrompt" in value) ||
       check_272(value.extraSystemPrompt)) &&
+    (value.responseFormat === void 0 ||
+      !("responseFormat" in value) ||
+      check_agent_reply_format(value.responseFormat)) &&
+    (value.seed === void 0 || !("seed" in value) || Number.isInteger(value.seed)) &&
     (value.bootstrapContextMode === void 0 ||
       !("bootstrapContextMode" in value) ||
       check_431(value.bootstrapContextMode)) &&
@@ -3999,6 +4003,34 @@ var External = [
       check_272(value.voiceWakeTrigger)) &&
     check_6(value.idempotencyKey) &&
     (value.label === void 0 || !("label" in value) || check_94(value.label)),
+  check_agent_reply_format = (value) =>
+    check_agent_reply_json_schema(value) || check_agent_reply_json_object(value),
+  check_agent_reply_json_schema = (value) =>
+    typeof value == "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    value.type === "json_schema" &&
+    Object.getOwnPropertyNames(value).every((key) => key === "type" || key === "json_schema") &&
+    check_agent_reply_named_schema(value.json_schema),
+  check_agent_reply_named_schema = (value) =>
+    typeof value == "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    "name" in value &&
+    "schema" in value &&
+    Object.getOwnPropertyNames(value).every((key) => key === "name" || key === "schema") &&
+    check_63(value.name) &&
+    check_agent_reply_schema_object(value.schema),
+  check_agent_reply_json_object = (value) =>
+    typeof value == "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    value.type === "json_object" &&
+    "schema" in value &&
+    Object.getOwnPropertyNames(value).every((key) => key === "type" || key === "schema") &&
+    check_agent_reply_schema_object(value.schema),
+  check_agent_reply_schema_object = (value) =>
+    typeof value == "object" && value !== null && !Array.isArray(value),
   check_425 = (value) =>
     Array.isArray(value) && value.every((unique_222, index) => check_302(unique_222)),
   check_426 = (value) =>

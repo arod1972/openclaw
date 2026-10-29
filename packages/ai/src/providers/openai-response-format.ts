@@ -63,6 +63,30 @@ export function resolveOpenAICompletionsResponseFormat(
   };
 }
 
+/**
+ * llama-server rejects OpenAI `json_schema` and requires `{type:"json_object", schema}`.
+ * Same mapping as the llama-cpp plugin's request normalizer.
+ */
+export function rewriteLlamaServerResponseFormat(
+  responseFormat: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  if (!responseFormat || responseFormat.type === "text") {
+    return responseFormat;
+  }
+  const schema =
+    responseFormat.type === "json_schema"
+      ? isRecord(responseFormat.json_schema)
+        ? responseFormat.json_schema.schema
+        : responseFormat.schema
+      : responseFormat.type === "json_object"
+        ? responseFormat.schema
+        : responseFormat;
+  if (!isRecord(schema)) {
+    return responseFormat;
+  }
+  return { type: "json_object", schema };
+}
+
 /** Maps shared or provider-shaped structured-output options to the Responses API text format. */
 export function resolveOpenAIResponsesTextFormat(
   responseFormat: Record<string, unknown>,

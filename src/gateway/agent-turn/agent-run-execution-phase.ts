@@ -33,6 +33,7 @@ import { withCurrentUserTurnInput } from "../../sessions/user-turn-transcript-ru
 import { createDeferredCore } from "../../shared/deferred.js";
 import { isOperatorUiClient } from "../../utils/message-channel.js";
 import { discardPreparedInboundMedia } from "../chat-attachments.js";
+import { resolveOpenAiStreamParams } from "../openai-compat-errors.js";
 import { ADMIN_SCOPE } from "../operator-scopes.js";
 import { createAgentRunModelSelectionHandler } from "../server-methods/agent-run-model-selection.js";
 import { resolveSessionRuntimeCwd } from "../server-methods/agent-session-reset.js";
@@ -392,6 +393,10 @@ async function executeAgentRun(
               )
             : undefined;
         finalizePreparedAgentRunUserTurn(prepared.userTurn);
+        const agentStreamParams = resolveOpenAiStreamParams({
+          responseFormat: params.request.responseFormat,
+          seed: params.request.seed,
+        });
         await dispatchAdmittedAgentRun(
           withAgentRunDispatchExecutionIdentity(
             {
@@ -458,6 +463,7 @@ async function executeAgentRun(
                 modelRun: params.request.modelRun === true,
                 promptMode: params.request.promptMode,
                 extraSystemPrompt: params.request.extraSystemPrompt,
+                ...(agentStreamParams ? { streamParams: agentStreamParams } : {}),
                 bootstrapContextMode: params.request.bootstrapContextMode,
                 bootstrapContextRunKind: params.effectiveBootstrapContextRunKind,
                 toolsAllow: pluginSubagentToolsAllow ?? params.restoredCronContinuation?.toolsAllow,

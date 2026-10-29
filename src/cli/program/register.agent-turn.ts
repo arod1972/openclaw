@@ -26,6 +26,11 @@ export function registerAgentTurnCommand(
       "--thinking <level>",
       `Thinking level: ${THINKING_LEVELS_HELP.replaceAll("|", " | ")} where supported`,
     )
+    .option(
+      "--response-format <json>",
+      'Reply format JSON: {"type":"json_schema","json_schema":{"name","schema"}} or {"type":"json_object","schema"}',
+    )
+    .option("--seed <integer>", "Sampling seed, forwarded only where the provider accepts it")
     .option("--verbose <on|off>", "Persist agent verbose level for the session")
     .option(
       "--channel <channel>",

@@ -22,6 +22,7 @@ import {
 } from "../providers/openai-request-reasoning.js";
 import {
   resolveOpenAICompletionsResponseFormat,
+  rewriteLlamaServerResponseFormat,
   shouldOmitOllamaCompatResponseFormat,
 } from "../providers/openai-response-format.js";
 import {
@@ -330,7 +331,7 @@ export function buildOpenAICompletionsRequest(
     params.top_p = options.topP;
   }
   const requestedResponseFormat = options?.responseFormat;
-  const responseFormat =
+  let responseFormat =
     policy.mode === "direct" && requestedResponseFormat === undefined
       ? undefined
       : resolveOpenAICompletionsResponseFormat(
@@ -343,6 +344,16 @@ export function buildOpenAICompletionsRequest(
             : requestedResponseFormat,
           compat.supportsJsonSchemaResponseFormat,
         );
+  // llamacpp is an openai-completions endpoint. The compat flag opts that model
+  // into llama-server's wire form. Other providers keep today's json_schema path.
+  // Absent responseFormat is left unset.
+  if (
+    responseFormat &&
+    model.provider === "llamacpp" &&
+    compat.supportsJsonSchemaResponseFormat
+  ) {
+    responseFormat = rewriteLlamaServerResponseFormat(responseFormat);
+  }
   if (responseFormat !== undefined) {
     params.response_format = responseFormat;
   }

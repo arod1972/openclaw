@@ -280,6 +280,27 @@ export const PollParamsSchema = closedObject({
   idempotencyKey: NonEmptyString,
 });
 
+const JsonObjectSchema = Type.Record(Type.String(), Type.Unknown());
+
+/**
+ * Closed reply contract for one agent turn.
+ * `json_schema` is the OpenAI descriptor; `json_object` carries the schema
+ * llama-server accepts on the wire.
+ */
+const AgentResponseFormatSchema = Type.Union([
+  closedObject({
+    type: Type.Literal("json_schema"),
+    json_schema: closedObject({
+      name: NonEmptyString,
+      schema: JsonObjectSchema,
+    }),
+  }),
+  closedObject({
+    type: Type.Literal("json_object"),
+    schema: JsonObjectSchema,
+  }),
+]);
+
 /** Main agent-run request accepted by the gateway. */
 export const AgentParamsSchema = closedObject({
   message: NonEmptyString,
@@ -319,6 +340,9 @@ export const AgentParamsSchema = closedObject({
   modelRun: Type.Optional(Type.Boolean()),
   promptMode: Type.Optional(stringLiteralUnion(["full", "minimal", "none"])),
   extraSystemPrompt: Type.Optional(Type.String()),
+  responseFormat: Type.Optional(AgentResponseFormatSchema),
+  /** Sampling seed. Providers that do not accept one ignore it. */
+  seed: Type.Optional(Type.Integer()),
   bootstrapContextMode: Type.Optional(stringLiteralUnion(["full", "lightweight"])),
   bootstrapContextRunKind: Type.Optional(stringLiteralUnion(["default", "heartbeat", "cron"])),
   acpTurnSource: Type.Optional(Type.Literal("manual_spawn")),

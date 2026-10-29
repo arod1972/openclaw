@@ -23,6 +23,33 @@ describe("AgentParamsSchema", () => {
       idempotencyKey: "recovery-1",
     });
   });
+
+  it("accepts a closed reply format and seed, and still rejects unknown fields", () => {
+    const schema = {
+      type: "object",
+      properties: { gap: { type: "number" } },
+      required: ["gap"],
+    };
+    accepts(S.AgentParamsSchema, {
+      ...request,
+      responseFormat: {
+        type: "json_schema",
+        json_schema: { name: "reply", schema },
+      },
+      seed: 7,
+    });
+    accepts(S.AgentParamsSchema, {
+      ...request,
+      responseFormat: { type: "json_object", schema },
+    });
+    rejects(S.AgentParamsSchema, {
+      ...request,
+      responseFormat: { type: "json_schema", json_schema: { schema } },
+    });
+    rejects(S.AgentParamsSchema, { ...request, responseFormat: { type: "text" } });
+    rejects(S.AgentParamsSchema, { ...request, seed: 1.5 });
+    rejects(S.AgentParamsSchema, { ...request, notAField: true });
+  });
 });
 
 describe("MessageActionParamsSchema", () => {
