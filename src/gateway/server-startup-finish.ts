@@ -40,6 +40,8 @@ import { DEFAULT_TERMINAL_DETACH_SECONDS } from "./terminal/session-limits.js";
 
 type GatewayLogger = ReturnType<typeof createSubsystemLogger>;
 const [POST_READY_MAINTENANCE_DELAY_MS, RETAINED_PLUGIN_CLEANUP_DELAY_MS] = [250, 30_000];
+// Each reclaim pass is byte-budgeted (512 MiB); repeat often enough to outpace abandonment.
+export const SQLITE_SNAPSHOT_RECLAIM_REPEAT_MS = 2 * 60_000;
 
 type GatewayStartedRuntime = GatewayKernelRuntime & GatewayHttpTransport;
 
@@ -659,8 +661,11 @@ export async function finishGatewayStartup(params: {
         delayMs: RETAINED_PLUGIN_CLEANUP_DELAY_MS,
         retryDelayMs: RETAINED_PLUGIN_CLEANUP_DELAY_MS,
         isClosing: () => lifecycle.closePreludeStarted,
-        isBusy: () => getActiveGatewayRootWorkCount({ excludeCurrent: true }) > 0,
-        repeatDelayMs: 15 * 60_000,
+        // Reclamation is fenced by staging tokens and a 15-minute grace period in
+        // its own worker, so it must not wait for an idle gateway: a continuously
+        // busy gateway otherwise never reclaims snapshots abandoned by killed CLIs.
+        isBusy: () => false,
+        repeatDelayMs: SQLITE_SNAPSHOT_RECLAIM_REPEAT_MS,
         run: async () => {
           const { reclaimAbandonedSqliteSnapshotsAsync } =
             await import("../infra/sqlite-snapshot-reclamation.js");
